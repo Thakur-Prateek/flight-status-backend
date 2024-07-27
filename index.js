@@ -1,7 +1,8 @@
 // index.js
 const express = require('express');
 const bodyParser = require('body-parser');
-const { firestore, client } = require('./config');
+const nodemailer = require('nodemailer');
+const { firestore, client, connectRabbitMQ } = require('./config');
 const app = express();
 
 app.use(bodyParser.json());
@@ -53,6 +54,43 @@ app.get('/preferences/:userId', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Error fetching preferences' });
+  }
+});
+
+// Send notification
+const sendNotification = async (channel, queue, message) => {
+  await channel.assertQueue(queue, { durable: false });
+  channel.sendToQueue(queue, Buffer.from(message));
+  console.log(`Sent message to ${queue}: ${message}`);
+};
+
+// Example usage of sendNotification
+const notifyUser = async (userId, message) => {
+  try {
+    const channel = await connectRabbitMQ();
+    await sendNotification(channel, 'notification_queue', JSON.stringify({ userId, message }));
+  } catch (err) {
+    console.error('Error sending notification:', err);
+  }
+};
+
+// Example: Send notification when flight status changes
+app.post('/flight-status-update', async (req, res) => {
+  const { userId, flightStatus } = req.body;
+  try {
+    // Update flight status in PostgreSQL
+    const query = 'UPDATE flights SET status = $1 WHERE user_id = $2';
+    const values = [flightStatus, userId];
+    await client.query(query, values);
+
+    // Notify user
+    const message = `Your flight status has been updated to ${flightStatus}`;
+    await notifyUser(userId, message);
+
+    res.json({ message: 'Flight status updated and notification sent' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error updating flight status' });
   }
 });
 
