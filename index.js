@@ -1,100 +1,92 @@
-// index.js
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const Sequelize = require('sequelize');
 const express = require('express');
 const bodyParser = require('body-parser');
-const nodemailer = require('nodemailer');
-const { firestore, client, connectRabbitMQ } = require('./config');
-const app = express();
+const cors = require('cors');
 
+const basename = path.basename(__filename);
+const env = process.env.NODE_ENV || 'development';
+const config = require(__dirname + '/config/config.json')[env];
+const db = {};
+const app = express();
+const port = 3001;
+
+app.use(cors());
 app.use(bodyParser.json());
 
-app.get('/', (req, res) => {
-  res.send('Welcome to Flight Status Backend!');
+let sequelize;
+if (config.use_env_variable) {
+  sequelize = new Sequelize(process.env[config.use_env_variable], config);
+} else {
+  sequelize = new Sequelize(config.database, config.username, config.password, {
+    host: config.host,
+    dialect: config.dialect
+  });
+}
+
+fs
+  .readdirSync(path.join(__dirname, 'models'))
+  .filter(file => {
+    return (file.indexOf('.') !== 0) && (file !== basename) && (file.slice(-3) === '.js');
+  })
+  .forEach(file => {
+    const model = require(path.join(__dirname, 'models', file))(sequelize, Sequelize.DataTypes);
+    db[model.name] = model;
+  });
+
+Object.keys(db).forEach(modelName => {
+  if (db[modelName].associate) {
+    db[modelName].associate(db);
+  }
 });
 
-// Endpoint to fetch flight details from PostgreSQL
-app.get('/flight-details/:userId', async (req, res) => {
-  const userId = req.params.userId;
+db.sequelize = sequelize;
+db.Sequelize = Sequelize;
+
+// Authentication endpoint with detailed logging
+app.post('/authenticate', async (req, res) => {
+  const { mobile_number } = req.body;
+  console.log(`Authenticating user with mobile number: ${mobile_number}`);
+
   try {
-    const query = 'SELECT * FROM flights WHERE user_id = $1';
-    const values = [userId];
-    const result = await client.query(query, values);
-    if (result.rows.length > 0) {
-      res.json(result.rows[0]);
+    const user = await db.User.findOne({ where: { mobile_number } });
+    console.log(`User found: ${JSON.stringify(user)}`);
+
+    if (user) {
+      res.json({ success: true, user });
     } else {
-      res.status(404).json({ message: 'No flight details found for this user.' });
+      res.status(404).json({ success: false, message: 'User not found' });
+    }
+  } catch (err) {
+    console.error(`Error checking user: ${err.message}`);
+    console.error(err.stack);
+    res.status(500).send('Error checking user');
+  }
+});
+
+// Fetch flight details for authenticated user
+app.get('/flights/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const flights = await db.Flight.findAll({ where: { user_id: userId } });
+
+    if (flights.length > 0) {
+      res.json({ success: true, flights });
+    } else {
+      res.status(404).json({ success: false, message: 'No flights found for this user' });
     }
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error fetching flight details' });
+    res.status(500).send('Error fetching flight details');
   }
 });
 
-// Endpoint to update user preferences in Firestore
-app.post('/update-preferences', async (req, res) => {
-  const { userId, preferences } = req.body;
-  try {
-    await firestore.collection('users').doc(userId).set({ preferences }, { merge: true });
-    res.json({ message: 'Preferences updated successfully' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error updating preferences' });
-  }
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
 });
 
-// Endpoint to get user preferences from Firestore
-app.get('/preferences/:userId', async (req, res) => {
-  const userId = req.params.userId;
-  try {
-    const doc = await firestore.collection('users').doc(userId).get();
-    if (doc.exists) {
-      res.json(doc.data());
-    } else {
-      res.status(404).json({ message: 'No preferences found for this user.' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error fetching preferences' });
-  }
-});
-
-// Send notification
-const sendNotification = async (channel, queue, message) => {
-  await channel.assertQueue(queue, { durable: false });
-  channel.sendToQueue(queue, Buffer.from(message));
-  console.log(`Sent message to ${queue}: ${message}`);
-};
-
-// Example usage of sendNotification
-const notifyUser = async (userId, message) => {
-  try {
-    const channel = await connectRabbitMQ();
-    await sendNotification(channel, 'notification_queue', JSON.stringify({ userId, message }));
-  } catch (err) {
-    console.error('Error sending notification:', err);
-  }
-};
-
-// Example: Send notification when flight status changes
-app.post('/flight-status-update', async (req, res) => {
-  const { userId, flightStatus } = req.body;
-  try {
-    // Update flight status in PostgreSQL
-    const query = 'UPDATE flights SET status = $1 WHERE user_id = $2';
-    const values = [flightStatus, userId];
-    await client.query(query, values);
-
-    // Notify user
-    const message = `Your flight status has been updated to ${flightStatus}`;
-    await notifyUser(userId, message);
-
-    res.json({ message: 'Flight status updated and notification sent' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error updating flight status' });
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+module.exports = db;

@@ -1,0 +1,23 @@
+{
+  "development": {
+    "username": "prateek",
+    "password": "396258",
+    "database": "flight_status",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  },
+  "test": {
+    "username": "prateek",
+    "password": "396258",
+    "database": "flight_status",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  },
+  "production": {
+    "username": "prateek",
+    "password": "396258",
+    "database": "flight_status",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  }
+}

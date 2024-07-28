@@ -1,9 +1,8 @@
-// config.js
 const admin = require('firebase-admin');
 const { Client } = require('pg');
 const amqp = require('amqplib');
 
-const serviceAccount = require('./path/to/your/serviceAccountKey.json');
+const serviceAccount = require('./serviceAccountKey.json');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -29,3 +28,6 @@ const connectRabbitMQ = async () => {
 };
 
 module.exports = { firestore, client, connectRabbitMQ };
+
+
+
