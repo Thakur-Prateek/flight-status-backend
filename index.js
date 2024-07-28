@@ -7,6 +7,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 
+const { sendNotificationEvent } = require('./events/producer');
+
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
 const config = require(__dirname + '/config/config.json')[env];
@@ -127,6 +129,33 @@ app.post('/notifications/:userId', async (req, res) => {
   } catch (err) {
     console.error(`Error updating notification settings: ${err.message}`);
     res.status(500).send('Error updating notification settings');
+  }
+});
+
+// Endpoint to send notifications (example usage of RabbitMQ)
+app.post('/sendNotification', async (req, res) => {
+  const { userId, flightDetails } = req.body;
+  try {
+    const user = await db.User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Fetch the user's notification preferences
+    const notification = await db.Notification.findOne({ where: { user_id: userId } });
+    if (!notification) {
+      return res.status(404).json({ success: false, message: 'Notification settings not found' });
+    }
+
+    const notificationMessage = `Flight Details\n\nFlight Number: ${flightDetails.flightNumber}\nDeparture Time: ${flightDetails.departureTime}\nArrival Time: ${flightDetails.arrivalTime}\nStatus: ${flightDetails.status}\nGate: ${flightDetails.gate}\nTerminal: ${flightDetails.terminal}`;
+
+    // Send the notification event to RabbitMQ
+    sendNotificationEvent(JSON.stringify({ user, flightDetails, notification }));
+
+    res.json({ success: true, message: 'Notifications sent' });
+  } catch (err) {
+    console.error(`Error sending notification: ${err.message}`);
+    res.status(500).send('Error sending notification');
   }
 });
 
