@@ -1,7 +1,5 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Notification extends Model {
     static associate(models) {
@@ -33,7 +31,7 @@ module.exports = (sequelize, DataTypes) => {
     sequelize,
     modelName: 'Notification',
     tableName: 'notifications',
-    timestamps: false  // Disable timestamps
+    timestamps: true // Ensure timestamps are enabled
   });
   return Notification;
 };

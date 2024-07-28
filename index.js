@@ -85,6 +85,51 @@ app.get('/flights/:userId', async (req, res) => {
   }
 });
 
+// Fetch notification preferences
+app.get('/notifications/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const notification = await db.Notification.findOne({ where: { user_id: userId } });
+    if (notification) {
+      res.json({ success: true, notification });
+    } else {
+      res.status(404).json({ success: false, message: 'Notification settings not found' });
+    }
+  } catch (err) {
+    console.error(`Error fetching notification settings: ${err.message}`);
+    res.status(500).send('Error fetching notification settings');
+  }
+});
+
+// Update notification preferences
+app.post('/notifications/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { notify_sms, notify_email, notify_whatsapp, notify_browser } = req.body;
+  try {
+    const notification = await db.Notification.findOne({ where: { user_id: userId } });
+    if (notification) {
+      notification.notify_sms = notify_sms;
+      notification.notify_email = notify_email;
+      notification.notify_whatsapp = notify_whatsapp;
+      notification.notify_browser = notify_browser;
+      await notification.save();
+      res.json({ success: true, notification });
+    } else {
+      const newNotification = await db.Notification.create({
+        user_id: userId,
+        notify_sms,
+        notify_email,
+        notify_whatsapp,
+        notify_browser
+      });
+      res.json({ success: true, notification: newNotification });
+    }
+  } catch (err) {
+    console.error(`Error updating notification settings: ${err.message}`);
+    res.status(500).send('Error updating notification settings');
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });

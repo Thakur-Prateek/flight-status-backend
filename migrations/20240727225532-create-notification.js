@@ -38,3 +38,23 @@ module.exports = {
     await queryInterface.dropTable('Notifications');
   }
 };
+
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
+    await queryInterface.addColumn('notifications', 'createdAt', {
+      allowNull: false,
+      type: Sequelize.DATE,
+      defaultValue: Sequelize.literal('NOW()')
+    });
+    await queryInterface.addColumn('notifications', 'updatedAt', {
+      allowNull: false,
+      type: Sequelize.DATE,
+      defaultValue: Sequelize.literal('NOW()')
+    });
+  },
+
+  down: async (queryInterface, Sequelize) => {
+    await queryInterface.removeColumn('notifications', 'createdAt');
+    await queryInterface.removeColumn('notifications', 'updatedAt');
+  }
+};
