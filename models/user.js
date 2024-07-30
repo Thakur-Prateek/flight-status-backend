@@ -1,26 +1,28 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class User extends Model {
-    static associate(models) {
-      // define association here
-    }
-  }
-  User.init({
+  const User = sequelize.define('User', {
     mobile_number: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true
     },
     name: DataTypes.STRING,
-    email: DataTypes.STRING
+    email: DataTypes.STRING,
+    pushSubscription: DataTypes.JSON
   }, {
-    sequelize,
-    modelName: 'User',
-    tableName: 'users',
-    timestamps: false  // Disable timestamps
+    underscored: false,
+    freezeTableName: true,
+    tableName: 'users'
   });
+
+  User.associate = function(models) {
+    User.hasMany(models.Flight, {
+      foreignKey: 'user_id'
+    });
+    User.hasOne(models.Notification, {
+      foreignKey: 'user_id'
+    });
+  };
+
   return User;
 };

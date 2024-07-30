@@ -1,13 +1,13 @@
 const amqp = require('amqplib/callback_api');
 
-const sendNotificationEvent = (message) => {
-  amqp.connect('amqp://localhost', (error0, connection) => {
-    if (error0) {
-      throw error0;
+function sendNotification(notificationData) {
+  amqp.connect('amqp://localhost', (err, connection) => {
+    if (err) {
+      throw err;
     }
-    connection.createChannel((error1, channel) => {
-      if (error1) {
-        throw error1;
+    connection.createChannel((err, channel) => {
+      if (err) {
+        throw err;
       }
       const queue = 'notificationQueue';
 
@@ -15,10 +15,14 @@ const sendNotificationEvent = (message) => {
         durable: false
       });
 
-      channel.sendToQueue(queue, Buffer.from(message));
-      console.log(" [x] Sent %s", message);
+      channel.sendToQueue(queue, Buffer.from(JSON.stringify(notificationData)));
+      console.log(`[x] Sent ${JSON.stringify(notificationData)}`);
     });
-  });
-};
 
-module.exports = { sendNotificationEvent };
+    setTimeout(() => {
+      connection.close();
+    }, 500);
+  });
+}
+
+module.exports = { sendNotification };

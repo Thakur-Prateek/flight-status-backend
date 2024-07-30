@@ -1,41 +1,33 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class Flight extends Model {
-    static associate(models) {
-      // define association here
-    }
-  }
-  Flight.init({
+  const Flight = sequelize.define('Flight', {
     user_id: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: false,
+      references: {
+        model: 'users',
+        key: 'id'
+      }
     },
-    flight_number: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
-    departure_time: {
-      type: DataTypes.DATE,
-      allowNull: false
-    },
-    arrival_time: {
-      type: DataTypes.DATE,
-      allowNull: false
-    },
-    status: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
+    flight_number: DataTypes.STRING,
+    departure_time: DataTypes.DATE,
+    arrival_time: DataTypes.DATE,
+    status: DataTypes.STRING,
     gate: DataTypes.STRING,
-    terminal: DataTypes.STRING
+    terminal: DataTypes.STRING,
+    boarding_time: DataTypes.DATE,
+    destination: DataTypes.STRING
   }, {
-    sequelize,
-    modelName: 'Flight',
-    tableName: 'flights',
-    timestamps: false  // Disable timestamps
+    underscored: false,
+    freezeTableName: true,
+    tableName: 'flights'
   });
+
+  Flight.associate = function(models) {
+    Flight.belongsTo(models.User, {
+      foreignKey: 'user_id'
+    });
+  };
+
   return Flight;
 };
