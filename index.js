@@ -109,7 +109,7 @@ app.post('/sendNotification', async (req, res) => {
     const user = await db.User.findOne({ where: { id: userId } });
 
     if (user) {
-      const messageBody = `Flight ${flightDetails.flightNumber} is now ${flightDetails.status}. ` +
+      const messageBody = `Flight ${flightDetails.flightNumber}. ` +
                           `Departure: ${new Date(flightDetails.departureTime).toLocaleString()}. ` +
                           `Arrival: ${new Date(flightDetails.arrivalTime).toLocaleString()}.`;
 

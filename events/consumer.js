@@ -30,7 +30,7 @@ amqp.connect('amqp://localhost', (error0, connection) => {
                 const notification = await db.Notification.findOne({ where: { user_id: user.id } });
 
                 if (notification) {
-                    const messageBody = `Flight ${flightDetails.flightNumber} is now ${flightDetails.status}. ` +
+                    const messageBody = `Flight ${flightDetails.flightNumber}. ` +
                                         `Departure: ${new Date(flightDetails.departureTime).toLocaleString()}. ` +
                                         `Arrival: ${new Date(flightDetails.arrivalTime).toLocaleString()}.`;
 
