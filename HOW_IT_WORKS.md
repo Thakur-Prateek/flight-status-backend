@@ -15,7 +15,6 @@
 - **Endpoints**:
   - `/notifications/:userId`: Manages user notification preferences.
   - `/sendNotification`: Sends flight status updates to users.
-  - `/subscribe`: Subscribes users to push notifications (not used in the current version).
 
 ## Data Flow
 
